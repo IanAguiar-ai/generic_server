@@ -117,15 +117,20 @@ def see_txt(name:str, text_old):
     """
     Lê o comando manual do root.
     """
-    with open(name, 'r') as arq:
-        text = arq.read()
-        text = text.split("\n")
-        if text_old.save != text:
-            print(f"Comando mandado <{text}>")
-            text_old.save = text
-            return text
-        else:
-            return None
+    try:
+        with open(name, 'r') as arq:
+            text = arq.read()
+            text = text.split("\n")
+            if text_old.save != text:
+                print(f"Comando mandado <{text}>")
+                text_old.save = text
+                return text
+            else:
+                return None
+    except FileNotFoundError:
+        with open(name, 'w') as arq:
+            pass
+        print(f"Criado arquivo {name}\n")
 
 def comand_line(memory, server):
     """
