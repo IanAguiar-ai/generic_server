@@ -1,18 +1,22 @@
 """
 Server aberto para requisições e respostas.
 """
+version = [0, 0, 1]
+
 import socket
 from threading import Thread
 from time import sleep, time
 from datetime import datetime
+from os import listdir
 
 class Server:
-    def __init__(self, host:str = "0.0.0.0", port:int = 12345, limit:int = 3, logic = None):
+    def __init__(self, host:str = "0.0.0.0", port:int = 20241, limit:int = 3, logic = None):
         self.points = {}
         self.equivalent = {"ip":{}, "int":{}}
         self.print__ = True
         self.send_to = {}
         self.condition = {}
+        self.program = {}
 
         self.logic = logic #Função
         #text = self.logic(self, text:str, ip:str, port:int) -> str
@@ -41,8 +45,9 @@ class Server:
         A hierarquia da resposta é dada por:
         1) Está bloqueado <server.points[ip]["block"]>
         2) Tem texto pedido root <server.send_to[ip]>
-        3) Satisfaz uma condição passada pelo root em self.condition[text]
-        4) Confere na lógica passada ao criar o servidor. <server.logic>
+        3) Satisfaz uma condição passada pelo root em <self.condition[text]>
+        4) Confere se existe pacotes de arquivos a serem mandados na lista <self.program[ip]>
+        5) Confere na lógica passada ao criar o servidor. <server.logic>
 
         * Onde <ip> é o ip do ponto que fez a requisição;
         * <text> é o texto mandado pelo ponto;
@@ -91,6 +96,31 @@ class Server:
         if text in self.condition: #Se o texto está igual as condições salvas pelo root
             return self.condition[text]
 
+        elif text.find("send_program") > -1: #Requisição para mandar um programa
+            if not ip in self.program: #Se não tem nenhuma requisição anterior para qualquer programa neste ip
+                try:
+                    len_block = 950
+                    text = text.split(" ")
+                    program = "§" + text[1]
+                    with open(program, "r") as pr_:
+                        pr = pr_.read()
+                        blocks = int(len(pr)/len_block) + 1
+                        blocks_part = []
+                        for i in range(0, blocks):
+                            blocks_part.append(pr[i*len_block: (i+1)*len_block])
+                    self.program[ip] = blocks_part
+                    self.print_("{blocks} blocos necessários para mandar o {program}")
+                    return str(blocks)#Retorna o número de requisições necessárias
+                except FileNotFoundError:
+                    print(f"O programa {program} não existe no diretório atual!")
+                    return "0"
+            else: #Se já existe uma requisição de programa para este ip
+                to_send = self.program[ip][0]
+                self.program[ip].pop(0)
+                if len(self.program[ip]) == 0: #Se os pacotes acabaram apaga o ip da lista de programas a mandar
+                    del self.program[ip]
+                return to_send
+
         elif self.logic != None: #Se existir uma lógica importada ao servidor
             return self.logic(self, text, ip, port)
 
@@ -118,7 +148,7 @@ def see_txt(name:str, text_old):
     Lê o comando manual do root.
     """
     try:
-        with open(name, 'r') as arq:
+        with open(name, "r") as arq:
             text = arq.read()
             text = text.split("\n")
             if text_old.save != text:
@@ -128,7 +158,7 @@ def see_txt(name:str, text_old):
             else:
                 return None
     except FileNotFoundError:
-        with open(name, 'w') as arq:
+        with open(name, "w") as arq:
             pass
         print(f"Criado arquivo {name}\n")
 
@@ -150,6 +180,7 @@ def comand_line(memory, server):
 <block [ip]> bloqueia um ip
 <send_to [ip]> salva a próxima mensagem a mandar para um ip
 <if [algo] [faz algo]> salva uma condicional para mandar para os pontos caso satisfaça a condição
+<data> mostra os programas permitidos para mandar com o a requisição do ponto <send_program>
 
 
 
@@ -198,6 +229,18 @@ server.condition
                         print(f"{key} -> {server.send_to[key]}")
                     print("\n")
 
+                elif text == "data":
+                    for permission in [".txt", ".py"]:
+                        print(f"Permitidos '{permission}':")
+                        for program in listdir():
+                            if program.find(permission) > -1 and program[0] == "§":
+                                print(program.replace("§",""))
+                        print("\n")
+
+                    for key in server.program:
+                        print(f"{key} tem {server.program[key]} blocos a mandar")
+                    print("\n")
+
                 #Operações:
                 elif text.find("block") > -1:
                     try:
@@ -230,7 +273,7 @@ server.condition
                     new_text[1] = new_text[1].replace("#"," ")
                         
                     server.condition[new_text[1]] = new_text[2]
-                    print(f"Resposta definida: {new_text[1]} -> {new_text[2]}\n")
+                    print(f"Resposta definida: {new_text[1]} -> {new_text[2]}\n")                    
                 
 
 def run_server(server, memory):
