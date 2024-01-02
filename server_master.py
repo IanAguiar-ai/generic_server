@@ -4,6 +4,7 @@ Server aberto para requisições e respostas.
 import socket
 from threading import Thread
 from time import sleep, time
+from datetime import datetime
 
 class Server:
     def __init__(self, host:str = "0.0.0.0", port:int = 12345, limit:int = 3, logic = None):
@@ -48,25 +49,24 @@ class Server:
         * <server> é o próprio objeto <self>.
         """
         con, client = self.socket.accept() #Abre o socket
+        data = con.recv(1024).decode('utf-8') #Recebe 1024 bites do ponto
         ip, port = client[0], client[1] #Assim que um ponto conecta separa o ip e a porta
 
         self.print_(f"Conexão estabelecida com {client}")
 
         if not ip in self.equivalent["ip"]: #Confere se aquele ip já está registrado na base
-            self.print_("Nova conexão!")
+            self.print_(f"Nova conexão {ip}!")
             len_ = len(self.equivalent["ip"].values())
             self.equivalent["ip"][ip] = len_
             self.equivalent["int"][len_] = ip
-            self.send_to[ip] = None
             self.points[ip] = {"block":False,
-                                   "first_time": time(),
-                                   "last_time": time()}
+                               "first_time": time(),
+                               "last_time": time()}
         else: #Se já está registrado atualiza o horário de request
             self.points[ip]["last_time"] = time()
             
 
         if not self.points[ip]["block"]: #Se ele não foi bloqueado em algum momento
-            data = con.recv(1024).decode('utf-8') #Recebe 1024 bites do ponto
             self.print_(f"{client} disse: {data}")
 
             if not ip in self.send_to: #Se não tem nada programado em primeiro nível para dizer ao ponto
@@ -76,10 +76,12 @@ class Server:
                 del self.send_to[ip]
 
             if text != None: #Se o texto não for vazio ele manda:
+                self.print_(f"Respondendo ao {ip} -> {text}")
                 con.send(text.encode("utf-8"))
         else: #Se ele foi bloqueado ele é avisado:
+            self.print_(f"Respondendo ao {ip} -> You is blocket!")
             con.send("You is blocket!".encode("utf-8"))
-        
+
         con.close() #A conexão é fechada
 
     def request(self, text, ip, port):
@@ -92,12 +94,17 @@ class Server:
         elif self.logic != None: #Se existir uma lógica importada ao servidor
             return self.logic(self, text, ip, port)
 
+        return None
+
     def print_(self, text):
         """
         Printa.
         """
         if self.print__ == True:
-            print(text)
+            # Formatar a saída
+            format_ = "%Y-%m-%d %H:%M:%S"
+            data = datetime.now().strftime(format_)
+            print(f"{data} | {text}")
 
 class Memory:
     """
@@ -155,7 +162,6 @@ server.condition
 
         if text_ != None:
             for text in text_:
-                print(text)
                 #Salvando texto:
                 if text != "":
                     memory.save = text
@@ -195,21 +201,24 @@ server.condition
                             new_text[1] = server.equivalent["int"][int(new_text[1])]
 
                         server.points[new_text[1]]["block"] = True
-                        print(f"{new_text[1]} foi bloqueado!")
+                        print(f"{new_text[1]} foi bloqueado!\n")
                     except KeyError:
-                        print(f"'{new_text[1]}' não está registrado.")
+                        print(f"'{new_text[1]}' não está registrado.\n")
 
                 elif text.find("send_to") > -1:
-                    new_text = text.split(" ")
-                    if len(new_text[1]) <= 6:
-                        new_text[1] = server.equivalent["int"][int(new_text[1])]
+                    try:
+                        new_text = text.split(" ")
+                        if len(new_text[1]) <= 6:
+                            new_text[1] = server.equivalent["int"][int(new_text[1])]
 
-                    send_text = ""
-                    for i in range(2, len(new_text)):
-                        send_text += new_text[i] + " "
-                        
-                    server.send_to[new_text[1]] = send_text
-                    print(f"Mensagem salva para envio.")
+                        send_text = ""
+                        for i in range(2, len(new_text)):
+                            send_text += new_text[i] + " "
+                            
+                        server.send_to[new_text[1]] = send_text
+                        print(f"Mensagem '{send_text}' salva para envio do {new_text[1]}.\n")
+                    except KeyError:
+                        print(f"'{new_text[1]}' não está registrado.\n")
 
                 elif text.find("if") > -1:
                     new_text = text.split(" ")
