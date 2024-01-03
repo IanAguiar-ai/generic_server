@@ -217,7 +217,7 @@ server.condition
 
                 #Informacoes:
                 elif text == "exit":
-                    print("Terminando coneção!\n")
+                    print("Terminando conexão!\n")
                     exit()
                     return None            
 
