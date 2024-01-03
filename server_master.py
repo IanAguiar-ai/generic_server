@@ -54,7 +54,11 @@ class Server:
         * <text> é o texto mandado pelo ponto;
         * <server> é o próprio objeto <self>.
         """
-        con, client = self.socket.accept() #Abre o socket
+        try:
+            con, client = self.socket.accept() #Abre o socket
+        except OSError:
+            print("Thread principal foi fechado...")
+            exit()
         data = con.recv(1024).decode('utf-8') #Recebe 1024 bites do ponto
         ip, port = client[0], client[1] #Assim que um ponto conecta separa o ip e a porta
 
