@@ -8,6 +8,7 @@ from threading import Thread
 from time import sleep, time
 from datetime import datetime
 from os import listdir
+from sys import exit
 
 class Server:
     def __init__(self, host:str = "0.0.0.0", port:int = 20241, limit:int = 3, logic = None):
