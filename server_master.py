@@ -218,8 +218,8 @@ server.condition
                 #Informacoes:
                 elif text == "exit":
                     print("Terminando conexão!\n")
-                    exit()
-                    return None            
+                    self.socket.close()
+                    exit()     
 
                 elif text == "ips":
                     for key in server.equivalent["ip"]:
