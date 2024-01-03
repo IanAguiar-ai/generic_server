@@ -34,11 +34,11 @@ class Server:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.bind((host, port))
         self.socket.listen(limit)
+        self.ip = socket.gethostbyname(socket.gethostname())
         
 
     def __repr__(self):
-        print(f"Servidor escutando em {host}:{porta}")
-        return None
+        return f"Servidor escutando em {self.host}:{self.port} com o ip {self.ip}"
 
     def run_server(self, memory):
         """
@@ -70,24 +70,24 @@ class Server:
         else: #Se já está registrado atualiza o horário de request
             self.points[ip]["last_time"] = time()
             
+        try:
+            if not self.points[ip]["block"]: #Se ele não foi bloqueado em algum momento
+                self.print_(f"{client} disse: {data}")
 
-        if not self.points[ip]["block"]: #Se ele não foi bloqueado em algum momento
-            self.print_(f"{client} disse: {data}")
+                if not ip in self.send_to: #Se não tem nada programado em primeiro nível para dizer ao ponto
+                    text = self.request(data, ip, port) #Entra na lógica principal do request
+                else: #Se tem algo programado ele diz e apaga aquela mensagem da lista de a dizeres
+                    text = self.send_to[ip]
+                    del self.send_to[ip]
 
-            if not ip in self.send_to: #Se não tem nada programado em primeiro nível para dizer ao ponto
-                text = self.request(data, ip, port) #Entra na lógica principal do request
-            else: #Se tem algo programado ele diz e apaga aquela mensagem da lista de a dizeres
-                text = self.send_to[ip]
-                del self.send_to[ip]
-
-            if text != None: #Se o texto não for vazio ele manda:
-                self.print_(f"Respondendo ao {ip} -> {text}")
-                con.send(text.encode("utf-8"))
-        else: #Se ele foi bloqueado ele é avisado:
-            self.print_(f"Respondendo ao {ip} -> You is blocket!")
-            con.send("You is blocket!".encode("utf-8"))
-
-        con.close() #A conexão é fechada
+                if text != None: #Se o texto não for vazio ele manda:
+                    self.print_(f"Respondendo ao {ip} -> {text}")
+                    con.send(text.encode("utf-8"))
+            else: #Se ele foi bloqueado ele é avisado:
+                self.print_(f"Respondendo ao {ip} -> You is blocket!")
+                con.send("You is blocket!".encode("utf-8"))
+        finally:
+            con.close() #A conexão é fechada
 
     def request(self, text, ip, port):
         """
@@ -109,10 +109,10 @@ class Server:
                         for i in range(0, blocks):
                             blocks_part.append(pr[i*len_block: (i+1)*len_block])
                     self.program[ip] = blocks_part
-                    self.print_("{blocks} blocos necessários para mandar o {program}")
+                    self.print_(f"{blocks} blocos necessários para mandar o {program}")
                     return str(blocks)#Retorna o número de requisições necessárias
                 except FileNotFoundError:
-                    print(f"O programa {program} não existe no diretório atual!")
+                    self.print_(f"O programa {program} não existe no diretório atual!")
                     return "0"
             else: #Se já existe uma requisição de programa para este ip
                 to_send = self.program[ip][0]
@@ -217,6 +217,7 @@ server.condition
                 #Informacoes:
                 elif text == "exit":
                     print("Terminando coneção!\n")
+                    exit()
                     return None            
 
                 elif text == "ips":
@@ -283,13 +284,17 @@ def run_server(server, memory):
     while True:
         server.run_server(memory)
 
-if __name__ == "__main__":
+def main(host:str = "0.0.0.0", port:int = 20241, limit:int = 3, logic = None):
     memory = Memory()
-    server = Server()
+    server = Server(host, port, limit, logic)
+    print(server)
 
     process_server = Thread(target = run_server, args = [server, memory])
     process_server.start()
     
     comand_line(memory, server) #Está na thread main
     process_server.join()
+
+if __name__ == "__main__":
+    main()
 
