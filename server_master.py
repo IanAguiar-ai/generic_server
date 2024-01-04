@@ -19,16 +19,24 @@ class Server:
         self.condition = {}
         self.program = {}
 
-        self.logic = logic #Função
+        #Funções:
+        self.logic = logic 
         #text = self.logic(self, text:str, ip:str, port:int) -> str
         #Recebe:
-        # - objeto server
-        # - texto;
-        # - ip;
-        # - porta.
+        # - objeto server:class
+        # - texto:str
+        # - ip:str
+        # - porta:int
         #Retorna:
-        # - texto.
+        # - texto:str
 
+        self.key = key
+        #list_ip = self.key(list(map(int, self.ip.split("."))))
+        #Recebe:
+        # - ip:str
+        #Retorna:
+        # - key:str
+    
         #Configuração:
         self.host = host
         self.port = port
@@ -36,14 +44,14 @@ class Server:
         self.socket.bind((host, port))
         self.socket.listen(limit)
         self.ip = socket.gethostbyname(socket.gethostname())
-        self.key = key
+        
         
         with open("ip.txt", 'w') as arq:
             arq.write(self.ip)
 
         if self.key != None:
             with open("key.txt", 'w') as arq:
-                arq.write(self.key(list(map(int, self.ip.split(".")))))
+                arq.write(".".join(list(map(str,self.key(list(map(int, self.ip.split("."))))))))
 
     def __repr__(self):
         return f"Servidor escutando em {self.host}:{self.port} com o ip {self.ip}"
