@@ -1,7 +1,7 @@
 """
 Server aberto para requisições e respostas.
 """
-version = [0, 0, 1]
+version = [0, 0, 2]
 
 import socket
 from threading import Thread
@@ -11,7 +11,7 @@ from os import listdir
 from sys import exit
 
 class Server:
-    def __init__(self, host:str = "0.0.0.0", port:int = 20241, limit:int = 3, logic = None):
+    def __init__(self, host:str = "0.0.0.0", port:int = 20241, limit:int = 3, logic = None, key = None):
         self.points = {}
         self.equivalent = {"ip":{}, "int":{}}
         self.print__ = True
@@ -36,7 +36,14 @@ class Server:
         self.socket.bind((host, port))
         self.socket.listen(limit)
         self.ip = socket.gethostbyname(socket.gethostname())
+        self.key = key
         
+        with open("ip.txt", 'w') as arq:
+            arq.write(self.ip)
+
+        if self.key != None:
+            with open("key.txt", 'w') as arq:
+                arq.write(self.key(list(map(int, self.ip.split(".")))))
 
     def __repr__(self):
         return f"Servidor escutando em {self.host}:{self.port} com o ip {self.ip}"
