@@ -1,7 +1,7 @@
 """
 Server aberto para requisições e respostas.
 """
-version = [0, 0, 2]
+version = [0, 0, 3]
 
 import socket
 from threading import Thread
@@ -9,6 +9,26 @@ from time import sleep, time
 from datetime import datetime
 from os import listdir
 from sys import exit
+
+def _ip_adress_():
+    """
+    Obtain ip in linux
+    """
+    try:
+        import netifaces
+    except:
+        print("In thre terminal:\n\npip install netifaces")
+        sleep(30)
+        exit()
+    interfaces = netifaces.interfaces()
+    for interface in interfaces:
+        try:
+            ip_adress = netifaces.ifaddresses(interface)[netifaces.AF_INET][0]['addr']
+            if ip_adress != '127.0.0.1':
+                return ip_adress
+        except (KeyError, IndexError):
+            pass
+    return None
 
 class Server:
     def __init__(self, host:str = "0.0.0.0", port:int = 20241, limit:int = 3, logic = None, key = None):
@@ -44,7 +64,9 @@ class Server:
         self.socket.bind((host, port))
         self.socket.listen(limit)
         self.ip = socket.gethostbyname(socket.gethostname())
-        
+        if self.ip == "127.0.1.1":
+            self.print_("The local IP was passed, getting the global IP...")
+            self.ip = _ip_adress_()        
         
         with open("ip.txt", 'w') as arq:
             arq.write(self.ip)
