@@ -14,27 +14,27 @@ def _ip_adress_():
     """
     Obtain ip in linux
     """
-##    try:
-##        import netifaces
-##    except:
-##        print("In thre terminal:\n\npip install netifaces")
-##        sleep(30)
-##        exit()
-##    interfaces = netifaces.interfaces()
-##    for interface in interfaces:
-##        try:
-##            ip_adress = netifaces.ifaddresses(interface)[netifaces.AF_INET][0]['addr']
-##            if ip_adress != '127.0.0.1':
-##                return ip_adress
-##        except (KeyError, IndexError):
-##            pass
-##    return None
-    import requests
+    try:
+        import netifaces
+    except:
+        print("In thre terminal:\n\npip install netifaces")
+        sleep(30)
+        exit()
+    interfaces = netifaces.interfaces()
+    for interface in interfaces:
+        try:
+            ip_adress = netifaces.ifaddresses(interface)[netifaces.AF_INET][0]['addr']
+            if ip_adress != '127.0.0.1':
+                print(ip_adress)
+        except (KeyError, IndexError):
+            pass
+
+    import request
     response = requests.get('https://httpbin.org/ip')
     return response.json()['origin']
 
 class Server:
-    def __init__(self, host:str = "0.0.0.0", port:int = 20241, limit:int = 3, logic = None, key = None):
+    def __init__(self, host:str = "::", port:int = 20241, limit:int = 3, logic = None, key = None):
         self.points = {}
         self.equivalent = {"ip":{}, "int":{}}
         self.print__ = True
@@ -329,7 +329,7 @@ def run_server(server, memory):
     while True:
         server.run_server(memory)
 
-def main(host:str = "0.0.0.0", port:int = 20241, limit:int = 3, logic = None):
+def main(host:str = "::", port:int = 20241, limit:int = 3, logic = None):
     memory = Memory()
     server = Server(host, port, limit, logic)
     print(server)
