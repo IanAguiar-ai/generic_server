@@ -29,7 +29,7 @@ def _ip_adress_():
 ##        except (KeyError, IndexError):
 ##            pass
 ##    return None
-    import request
+    import requests
     response = requests.get('https://httpbin.org/ip')
     return response.json()['origin']
 
