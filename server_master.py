@@ -488,9 +488,9 @@ def main(port:int = 20241, limit:int = 3, logic = None):
     print(server)
 
     process_server = Thread(target = run_server, args = [server, memory])
-    process_server.start()
     globals()["log"].add(f"run server")
-
+    process_server.start()
+        
     try:
         comand_line(memory, server) #Está na thread main
     except KeyboardInterrupt:
