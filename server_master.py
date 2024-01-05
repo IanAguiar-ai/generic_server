@@ -17,24 +17,30 @@ def _ip_adress_():
     try:
         import netifaces
     except:
-        print("In thre terminal:\n\npip install netifaces")
+        print("In thre terminal:\npip install netifaces")
         sleep(30)
         exit()
+    try:
+        import requests
+    except:
+        print("In thre terminal:\npip install request")
+        sleep(30)
+        exit()
+
     interfaces = netifaces.interfaces()
     for interface in interfaces:
         try:
-            ip_adress = netifaces.ifaddresses(interface)[netifaces.AF_INET][0]['addr']
+            ip_adress = netifaces.ifaddresses(interface)[netifaces.AF_INET6][0]['addr']
             if ip_adress != '127.0.0.1':
-                print(ip_adress)
+                print(f"IPv6:{ip_adress}")
         except (KeyError, IndexError):
             pass
 
-    import request
     response = requests.get('https://httpbin.org/ip')
     return response.json()['origin']
 
 class Server:
-    def __init__(self, host:str = "::", port:int = 20241, limit:int = 3, logic = None, key = None):
+    def __init__(self, port:int = 20241, limit:int = 3, logic = None, key = None):
         self.points = {}
         self.equivalent = {"ip":{}, "int":{}}
         self.print__ = True
@@ -61,10 +67,9 @@ class Server:
         # - key:str
     
         #Configuração:
-        self.host = host
         self.port = port
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.bind((host, port))
+        self.socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        self.socket.bind(('', port))
         self.socket.listen(limit)
         self.ip = socket.gethostbyname(socket.gethostname())
         if self.ip == "127.0.1.1":
@@ -79,7 +84,7 @@ class Server:
                 arq.write(".".join(list(map(str,self.key(list(map(int, self.ip.split("."))))))))
 
     def __repr__(self):
-        return f"Servidor escutando em {self.host}:{self.port} com o ip {self.ip}"
+        return f"Servidor escutando em {self.port} com o ip {self.ip} {self.socket.getsockname()}"
 
     def run_server(self, memory):
         """
@@ -329,9 +334,9 @@ def run_server(server, memory):
     while True:
         server.run_server(memory)
 
-def main(host:str = "::", port:int = 20241, limit:int = 3, logic = None):
+def main(port:int = 20241, limit:int = 3, logic = None):
     memory = Memory()
-    server = Server(host, port, limit, logic)
+    server = Server(port, limit, logic)
     print(server)
 
     process_server = Thread(target = run_server, args = [server, memory])
