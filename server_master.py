@@ -5,10 +5,133 @@ version = [0, 0, 3]
 
 import socket
 from threading import Thread
-from time import sleep, time
+from time import sleep, time, localtime
 from datetime import datetime
-from os import listdir
+from os import listdir, path
 from sys import exit
+
+def time_now():
+    data = localtime()
+    d = data.tm_mday
+    mt = data.tm_mon
+    y = data.tm_year
+    h = data.tm_hour
+    m = data.tm_min
+    s = data.tm_sec
+    return [d, mt, y, h, m, s]
+
+class Log:
+    """
+    Creates a txt log that stores information along with the machine's local time
+    """
+    def __init__(self, file:str = "log"):
+        """
+        file: File name next to directory
+        """
+        if file == "log":
+            t = time_now()
+            file += f"_{t[2]}_{t[1]:02}_{t[0]:02}"
+        if file.find(".txt") == -1:
+            file += ".txt"
+        self.file = file
+        self.name = id(self)
+        self.time_initial = time_now()
+        self.create_file()
+
+    def create_file(self):
+        """
+        Create txt file if file does not exist
+        """
+        if not path.isfile(self.file):
+            with open(self.file, 'w') as arq:
+                t = self.time_initial
+                arq.write(f"<log creation> {t[0]:02}/{t[1]:02}/{t[2]} - {t[3]:02}:{t[4]:02}:{t[5]:02}")
+                arq.write("""Níveis de registro:
+fatal	A tarefa não pode continuar e o componente, o aplicativo e o servidor não podem funcionar.
+severe	A tarefa não pode continuar mas o componente, aplicativo e servidor ainda podem funcionar. Esse nível também pode indicar um erro irrecuperável iminente.
+aviso	Erro potencial ou erro iminente. Este nível também pode indicar um defeito progressivo (por exemplo, a possível perda de recursos).
+audit	Evento significativo afetando o estado do servidor ou os recursos.
+config	Alteração na configuração ou status.""")
+
+        else:
+            self.add(text = f"connecting to the log", description = "action")
+
+    def add(self, text:str, description:str = "info"):
+        """
+        Add the requested text next to the time
+
+        Níveis de registro:
+        fatal	A tarefa não pode continuar e o componente, o aplicativo e o servidor não podem funcionar.
+        severe	A tarefa não pode continuar mas o componente, aplicativo e servidor ainda podem funcionar. Esse nível também pode indicar um erro irrecuperável iminente.
+        aviso	Erro potencial ou erro iminente. Este nível também pode indicar um defeito progressivo (por exemplo, a possível perda de recursos).
+        audit	Evento significativo afetando o estado do servidor ou os recursos.
+        config	Alteração na configuração ou status.
+        """
+        if path.isfile(self.file):
+            with open(self.file, 'r') as arq:
+                old = arq.read()
+        else:
+            print("The log has been lost!")
+
+        if path.isfile(self.file):
+            with open(self.file, 'w') as arq:
+                t = time_now()
+                arq.write(f"{old}\n<{description}> {t[0]:02}/{t[1]:02}/{t[2]} - {t[3]:02}:{t[4]:02}:{t[5]:02} | {text}")
+        else:
+            print("The log has been lost!")
+
+    def backup(self, new_log:str = "backup_log"):
+        """
+        Back up the specified log
+        new_log: Backup txt name
+        """
+        if new_log.find(".txt") == -1:
+            new_log += ".txt"
+        self.add(text = f"Make copy to '{new_log}'", description = "backup")
+        with open(self.file, 'r') as arq:
+            old = arq.read()
+        if not path.isfile(new_log):
+            with open(new_log, 'w') as arq:
+                arq.write(old)
+
+    def read(self):
+        """
+        Reads the log and returns a dictionary
+        """
+        self.add(text = f"getting log", description = "action")
+        
+        with open(self.file, 'r') as arq:
+            old = arq.read()
+        all_log = old.split("\n")
+        
+        all_log_dict = {}
+        for i in range(len(all_log)):
+            all_log[i] = all_log[i].replace("<","").split(">")
+            if not all_log[i][0] in all_log_dict:
+                all_log_dict[all_log[i][0]] = [all_log[i][1][1:]]
+            else:
+                all_log_dict[all_log[i][0]].append(all_log[i][1][1:])
+
+        all_log_dict["all"] = old.split("\n")        
+        return all_log_dict
+
+    def clean(self):
+        """
+        Clear the log
+        """
+        if path.isfile(self.file):
+            with open(self.file, 'w') as arq:
+                t = time_now()
+                arq.write(f"<log creation> {t[0]:02}/{t[1]:02}/{t[2]} - {t[3]:02}:{t[4]:02}:{t[5]:02}")
+        else:
+            print("The log has been lost!")
+
+    def __repr__(self):
+        log = self.read()
+        t = self.time_initial
+        text = f"Log: {self.file}\nCreation Log: {log['log creation'][0]}\nOpen log: {t[0]:02}/{t[1]:02}/{t[2]} - {t[3]:02}:{t[4]:02}:{t[5]:02}\nLines Log: {len(log['all'])}"
+        return text
+
 
 def _ip_adress_():
     """
@@ -99,10 +222,12 @@ class Server:
         * <text> é o texto mandado pelo ponto;
         * <server> é o próprio objeto <self>.
         """
+        log.add(f"Open socket {self.socket.getsockname()}", "audit")
         try:
             con, client = self.socket.accept() #Abre o socket
         except OSError:
             print("Thread principal foi fechado...")
+            log.add(f"Close thread server", "fatal")
             exit()
         data = con.recv(1024).decode('utf-8') #Recebe 1024 bites do ponto
         ip, port = client[0], client[1] #Assim que um ponto conecta separa o ip e a porta
@@ -137,6 +262,7 @@ class Server:
                 self.print_(f"Respondendo ao {ip} -> You is blocket!")
                 con.send("You is blocket!".encode("utf-8"))
         finally:
+            log.add(f"Close socket", "audit")
             con.close() #A conexão é fechada
 
     def request(self, text, ip, port):
@@ -163,6 +289,7 @@ class Server:
                     return str(blocks)#Retorna o número de requisições necessárias
                 except FileNotFoundError:
                     self.print_(f"O programa {program} não existe no diretório atual!")
+                    log.add(f"Not find {program}, can not send this", "aviso")
                     return "0"
             else: #Se já existe uma requisição de programa para este ip
                 to_send = self.program[ip][0]
@@ -185,6 +312,7 @@ class Server:
             format_ = "%Y-%m-%d %H:%M:%S"
             data = datetime.now().strftime(format_)
             print(f"{data} | {text}")
+            log.add(text = text)
 
 class Memory:
     """
@@ -208,9 +336,11 @@ def see_txt(name:str, text_old):
             else:
                 return None
     except FileNotFoundError:
+        log.add(f"No file {name}", "aviso")
         with open(name, "w") as arq:
             pass
         print(f"Criado arquivo {name}\n")
+        log.add("{name} created", "audit")
 
 def comand_line(memory, server):
     """
@@ -238,6 +368,13 @@ server.points
 server.equivalent
 server.send_to
 server.condition
+{'-' * 50}\n\n
+Níveis de registro:
+fatal	A tarefa não pode continuar e o componente, o aplicativo e o servidor não podem funcionar.
+severe	A tarefa não pode continuar mas o componente, aplicativo e servidor ainda podem funcionar. Esse nível também pode indicar um erro irrecuperável iminente.
+aviso	Erro potencial ou erro iminente. Este nível também pode indicar um defeito progressivo (por exemplo, a possível perda de recursos).
+audit	Evento significativo afetando o estado do servidor ou os recursos.
+config	Alteração na configuração ou status.
 {'-' * 50}\n\n""")
     
     text_old = Memory()
@@ -248,6 +385,7 @@ server.condition
 
         if text_ != None:
             for text in text_:
+                log.add(description = "root", text = text)
                 #Salvando texto:
                 if text != "":
                     memory.save = text
@@ -263,11 +401,13 @@ server.condition
                     else:
                         server.print__ = True
                         print("True\n")
+                    log.add(f"server.print_ = {server.print_}", "config")
 
                 #Informacoes:
                 elif text == "exit":
                     print("Terminando conexão!\n")
                     server.socket.close()
+                    log.add(description = "fatal", text = "exit")
                     exit()     
 
                 elif text == "ips":
@@ -301,6 +441,7 @@ server.condition
 
                         server.points[new_text[1]]["block"] = True
                         print(f"{new_text[1]} foi bloqueado!\n")
+                        log.add("block {new_text[1]}", "audit")
                     except KeyError:
                         print(f"'{new_text[1]}' não está registrado.\n")
 
@@ -316,6 +457,7 @@ server.condition
                             
                         server.send_to[new_text[1]] = send_text
                         print(f"Mensagem '{send_text}' salva para envio do {new_text[1]}.\n")
+                        gloabals()["log"].add( "next message for {new_text[1]} = '{send_text}'", "audit")
                     except KeyError:
                         print(f"'{new_text[1]}' não está registrado.\n")
 
@@ -324,7 +466,8 @@ server.condition
                     new_text[1] = new_text[1].replace("#"," ")
                         
                     server.condition[new_text[1]] = new_text[2]
-                    print(f"Resposta definida: {new_text[1]} -> {new_text[2]}\n")                    
+                    print(f"Resposta definida: {new_text[1]} -> {new_text[2]}\n")
+                    globals()["log"].add("if {new_text[1]} return {new_text[2]}", "audit")
                 
 
 def run_server(server, memory):
@@ -335,14 +478,25 @@ def run_server(server, memory):
         server.run_server(memory)
 
 def main(port:int = 20241, limit:int = 3, logic = None):
+    print(f"Version {'.'.join(list(map(str, globals()['version'])))}")
+    globals()["log"] = Log()
+    globals()["log"].add(f"Version {'.'.join(list(map(str, globals()['version'])))}")
     memory = Memory()
+    globals()["log"].add("memory created")
     server = Server(port, limit, logic)
+    globals()["log"].add(f"server created, chanel {server.ip}:{server.port}")
     print(server)
 
     process_server = Thread(target = run_server, args = [server, memory])
     process_server.start()
-    
-    comand_line(memory, server) #Está na thread main
+    globals()["log"].add(f"run server")
+
+    try:
+        comand_line(memory, server) #Está na thread main
+    except KeyboardInterrupt:
+        globals()["log"].add("root keyboard interrupt", "audit")
+        print("Kill comand_line")
+
     process_server.join()
 
 if __name__ == "__main__":
