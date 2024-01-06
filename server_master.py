@@ -191,8 +191,8 @@ class Server:
     
         #Configuração:
         self.port = port
-        self.socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
-        self.socket.bind(('', port))
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.bind(('0.0.0.0', port))
         self.socket.listen(limit)
         self.ip = socket.gethostbyname(socket.gethostname())
         if self.ip == "127.0.1.1":
